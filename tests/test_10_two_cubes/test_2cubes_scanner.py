@@ -17,6 +17,7 @@
 
 import platform
 import pprint
+import time
 from logging import getLogger
 
 import pytest
@@ -25,6 +26,11 @@ from tests._cubes import CUBES
 from toio.scanner import BLEScanner
 
 logger = getLogger(__name__)
+
+STRATEGY_BEST_TIMEOUT = 3.0
+STRATEGY_QUICK_TIMEOUT = 20.0
+# A timer can fire slightly early on a coarse clock such as the one on Windows.
+TIMER_MARGIN = 0.1
 
 
 @pytest.mark.asyncio
@@ -52,6 +58,79 @@ async def test_num1():
     for d in dev:
         pprint.pprint(d)
     assert len(dev) == 1
+
+
+async def scan_and_measure(scan_function, *args, **kwargs):
+    start = time.monotonic()
+    dev = await scan_function(*args, **kwargs)
+    elapsed = time.monotonic() - start
+    for d in dev:
+        pprint.pprint(d)
+    logger.info("elapsed: %.2f sec", elapsed)
+    return dev, elapsed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("num", [1, len(CUBES)])
+async def test_strategy_best_scans_until_timeout(num):
+    logger.info("** STRATEGY BEST (%d)", num)
+    dev, elapsed = await scan_and_measure(
+        BLEScanner.scan, num, timeout=STRATEGY_BEST_TIMEOUT, strategy="best"
+    )
+    assert len(dev) == num
+    assert elapsed >= STRATEGY_BEST_TIMEOUT - TIMER_MARGIN
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("num", [1, len(CUBES)])
+async def test_strategy_quick_returns_before_timeout(num):
+    logger.info("** STRATEGY QUICK (%d)", num)
+    dev, elapsed = await scan_and_measure(
+        BLEScanner.scan, num, timeout=STRATEGY_QUICK_TIMEOUT, strategy="quick"
+    )
+    assert len(dev) == num
+    assert elapsed < STRATEGY_QUICK_TIMEOUT
+
+
+@pytest.mark.asyncio
+async def test_strategy_best_is_default():
+    logger.info("** STRATEGY DEFAULT")
+    dev, elapsed = await scan_and_measure(
+        BLEScanner.scan, len(CUBES), timeout=STRATEGY_BEST_TIMEOUT
+    )
+    assert len(dev) == len(CUBES)
+    assert elapsed >= STRATEGY_BEST_TIMEOUT - TIMER_MARGIN
+
+
+@pytest.mark.asyncio
+async def test_strategy_best_sorts_by_rssi():
+    logger.info("** STRATEGY BEST (RSSI)")
+    dev, _ = await scan_and_measure(
+        BLEScanner.scan, len(CUBES), timeout=STRATEGY_BEST_TIMEOUT, strategy="best"
+    )
+    assert len(dev) == len(CUBES)
+    rssi = [d.advertisement.rssi for d in dev]
+    assert rssi == sorted(rssi, reverse=True)
+
+
+@pytest.mark.asyncio
+async def test_scan_best():
+    logger.info("** SCAN BEST")
+    dev, elapsed = await scan_and_measure(
+        BLEScanner.scan_best, len(CUBES), timeout=STRATEGY_BEST_TIMEOUT
+    )
+    assert len(dev) == len(CUBES)
+    assert elapsed >= STRATEGY_BEST_TIMEOUT - TIMER_MARGIN
+
+
+@pytest.mark.asyncio
+async def test_scan_quick():
+    logger.info("** SCAN QUICK")
+    dev, elapsed = await scan_and_measure(
+        BLEScanner.scan_quick, len(CUBES), timeout=STRATEGY_QUICK_TIMEOUT
+    )
+    assert len(dev) == len(CUBES)
+    assert elapsed < STRATEGY_QUICK_TIMEOUT
 
 
 @pytest.mark.asyncio

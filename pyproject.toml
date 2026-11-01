@@ -88,8 +88,8 @@ line-length = 88
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-# addopts = "--cov toio --log-cli-level=INFO --import-mode=importlib"
-addopts = "--log-cli-level=INFO --import-mode=importlib"
+# addopts = "--cov toio --log-cli-level=INFO"
+addopts = "--log-cli-level=INFO"
 pythonpath = "toio"
 testpaths = ["tests"]
 
