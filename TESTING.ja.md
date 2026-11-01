@@ -108,6 +108,7 @@ CI やローカルでの regression check では、このテストグループ�
 主な確認内容:
 
 - 複数 cube がある場合の scanner behavior。
+- `best` と `quick` の scan strategy とそのタイミング。
 - RSSI と local name による sort。
 - cube ID と BLE address による scan。
 - scan 結果からの `ToioCoreCube` instance 作成。

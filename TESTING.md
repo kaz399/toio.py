@@ -111,6 +111,7 @@ Two-cube hardware tests.
 Coverage includes:
 
 - Scanner behavior with multiple cubes.
+- Scan strategies `best` and `quick`, including their timing.
 - Sorting by RSSI and local name.
 - Scanning by cube ID and BLE address.
 - Creating one or more `ToioCoreCube` instances from scanned cube data.
