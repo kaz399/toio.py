@@ -8,13 +8,18 @@
 # ************************************************************
 
 import os
+import subprocess
+import sys
 import time
+from pathlib import Path
 from logging import getLogger
 
 import pytest
 from colorama import Back, Fore, Style, init
 
 logger = getLogger(__name__)
+
+DEFINITION_TEST_DIR = "test_50_definition"
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -26,6 +31,14 @@ def wait():
 def setup(pytestconfig):
     init()
     capmanager = pytestconfig.pluginmanager.getplugin("capturemanager")
+    # config.args holds only the resolved test paths (or testpaths when the
+    # command line selects nothing). invocation_params.args cannot be used
+    # here because it also contains option values such as the
+    # "no:cacheprovider" of "-p no:cacheprovider".
+    selected = [Path(arg) for arg in pytestconfig.args]
+    if selected and all(DEFINITION_TEST_DIR in path.parts for path in selected):
+        logger.info("** skip cube setup for definition-only tests")
+        return
 
     logger.info(
         Fore.RED
@@ -50,10 +63,11 @@ def setup(pytestconfig):
     logger.info("%s", yn)
     test_dir = os.path.dirname(__file__)
     cube_file = os.path.join(test_dir, "_cubes.py")
+    make_cube_list = os.path.join(test_dir, "make_cube_list.py")
     if yn.lower() != "s":
         logger.info("** GENERATE _cubes.py")
-        result = os.system("python ./make_cube_list.py %s" % cube_file)
-        if result:
+        result = subprocess.run([sys.executable, make_cube_list, cube_file])
+        if result.returncode:
             logger.info(
                 Fore.RED
                 + "** 2 cubes are not found. _cubes.py is not updated"
