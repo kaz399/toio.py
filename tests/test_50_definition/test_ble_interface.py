@@ -13,20 +13,30 @@ import pytest
 from toio.device_interface.ble import BleCube
 
 
+class ConnectionStatus:
+    """Truthy non-bool status, as bleak 0.22 returns from is_connected."""
+
+    def __init__(self, value: bool):
+        self._value = value
+
+    def __bool__(self) -> bool:
+        return self._value
+
+
 class FakeBleakClient:
     def __init__(self, *args, **kwargs):
-        self.is_connected = False
+        self.is_connected = ConnectionStatus(False)
         self.connect_calls = 0
         self.disconnect_calls = 0
 
     async def connect(self):
         self.connect_calls += 1
-        self.is_connected = True
+        self.is_connected = ConnectionStatus(True)
         return None
 
     async def disconnect(self):
         self.disconnect_calls += 1
-        self.is_connected = False
+        self.is_connected = ConnectionStatus(False)
         return None
 
 
